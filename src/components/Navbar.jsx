@@ -29,9 +29,32 @@ const Navbar = () => {
         };
 
         window.addEventListener('scroll', handleScroll);
-        handleScroll(); // Initial check
+        handleScroll();
         return () => window.removeEventListener('scroll', handleScroll);
     }, []);
+
+    // Close menu when resizing to desktop
+    useEffect(() => {
+        const handleResize = () => {
+            if (window.innerWidth >= 768 && isOpen) {
+                setIsOpen(false);
+            }
+        };
+        window.addEventListener('resize', handleResize);
+        return () => window.removeEventListener('resize', handleResize);
+    }, [isOpen]);
+
+    // Prevent body scroll when mobile menu is open
+    useEffect(() => {
+        if (isOpen) {
+            document.body.style.overflow = 'hidden';
+        } else {
+            document.body.style.overflow = 'unset';
+        }
+        return () => {
+            document.body.style.overflow = 'unset';
+        };
+    }, [isOpen]);
 
     const navLinks = [
         { name: 'About', href: '#about', id: 'about' },
@@ -41,22 +64,31 @@ const Navbar = () => {
         { name: 'Contact', href: '#contact', id: 'contact' },
     ];
 
+    // FIXED: Proper smooth scroll for mobile
     const handleNavClick = (e, href) => {
         e.preventDefault();
         setIsOpen(false);
-        const element = document.querySelector(href);
-        if (element) {
-            const offset = 80; // Account for navbar height
-            const bodyRect = document.body.getBoundingClientRect().top;
-            const elementRect = element.getBoundingClientRect().top;
-            const elementPosition = elementRect - bodyRect;
-            const offsetPosition = elementPosition - offset;
 
-            window.scrollTo({
-                top: offsetPosition,
-                behavior: 'smooth'
-            });
-        }
+        // Small delay to let menu close animation start
+        setTimeout(() => {
+            const element = document.querySelector(href);
+            if (element) {
+                // Calculate position relative to document
+                const headerOffset = 80;
+                const elementPosition = element.getBoundingClientRect().top;
+                const offsetPosition = elementPosition + window.pageYOffset - headerOffset;
+
+                window.scrollTo({
+                    top: offsetPosition,
+                    behavior: 'smooth'
+                });
+            }
+        }, 150);
+    };
+
+    // Toggle menu with proper state
+    const toggleMenu = () => {
+        setIsOpen(prev => !prev);
     };
 
     return (
@@ -65,12 +97,13 @@ const Navbar = () => {
             animate={{ y: 0, opacity: 1 }}
             transition={{ duration: 0.5, ease: "easeOut" }}
             className={`fixed w-full z-50 transition-all duration-500 ${isScrolled
-                    ? 'bg-gray-900/80 backdrop-blur-xl border-b border-white/10 shadow-2xl shadow-black/20 py-3'
-                    : 'bg-gray-900/40 backdrop-blur-md border-b border-white/5 py-4'
+                    ? 'bg-gray-900/90 backdrop-blur-xl border-b border-white/10 shadow-2xl shadow-black/30 py-3'
+                    : 'bg-gray-900/50 backdrop-blur-md border-b border-white/5 py-4'
                 }`}
         >
             {/* Subtle Top Glow */}
-            <div className={`absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-brand-primary/30 to-transparent transition-opacity duration-500 ${isScrolled ? 'opacity-100' : 'opacity-0'}`} />
+            <div className={`absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-brand-primary/30 to-transparent transition-opacity duration-500 ${isScrolled ? 'opacity-100' : 'opacity-0'
+                }`} />
 
             <div className="container mx-auto px-4 md:px-6">
                 <div className="flex justify-between items-center">
@@ -79,6 +112,10 @@ const Navbar = () => {
                         href="#"
                         className="flex items-center gap-2 group"
                         whileHover={{ scale: 1.02 }}
+                        onClick={(e) => {
+                            e.preventDefault();
+                            window.scrollTo({ top: 0, behavior: 'smooth' });
+                        }}
                     >
                         <div className="w-8 h-8 md:w-9 md:h-9 rounded-xl bg-gradient-to-br from-brand-primary via-brand-accent to-brand-primary p-0.5 shadow-lg shadow-brand-primary/25">
                             <div className="w-full h-full rounded-[10px] bg-gray-900 flex items-center justify-center">
@@ -116,7 +153,8 @@ const Navbar = () => {
                                 )}
 
                                 {/* Hover Glow */}
-                                <span className={`absolute inset-0 rounded-lg bg-gradient-to-r from-brand-primary/10 to-brand-accent/10 opacity-0 transition-opacity duration-300 ${activeLink !== link.id ? 'group-hover:opacity-100' : ''}`} />
+                                <span className={`absolute inset-0 rounded-lg bg-gradient-to-r from-brand-primary/10 to-brand-accent/10 opacity-0 transition-opacity duration-300 ${activeLink !== link.id ? 'group-hover:opacity-100' : ''
+                                    }`} />
                             </motion.a>
                         ))}
 
@@ -132,23 +170,24 @@ const Navbar = () => {
                         </motion.a>
                     </div>
 
-                    {/* Mobile Menu Button */}
+                    {/* Mobile Menu Button - FIXED */}
                     <motion.button
-                        className="md:hidden relative w-10 h-10 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-white hover:bg-white/10 hover:border-white/20 transition-all"
-                        onClick={() => setIsOpen(!isOpen)}
+                        onClick={toggleMenu}
+                        className="md:hidden relative w-11 h-11 rounded-xl bg-white/10 border border-white/15 flex items-center justify-center text-white hover:bg-white/15 hover:border-white/25 transition-all touch-manipulation z-50"
                         whileTap={{ scale: 0.95 }}
-                        aria-label="Toggle menu"
+                        aria-label={isOpen ? "Close menu" : "Open menu"}
+                        aria-expanded={isOpen}
                     >
-                        <AnimatePresence mode="wait">
+                        <AnimatePresence mode="wait" initial={false}>
                             {isOpen ? (
                                 <motion.div
                                     key="close"
                                     initial={{ rotate: -90, opacity: 0 }}
                                     animate={{ rotate: 0, opacity: 1 }}
                                     exit={{ rotate: 90, opacity: 0 }}
-                                    transition={{ duration: 0.2 }}
+                                    transition={{ duration: 0.15 }}
                                 >
-                                    <X size={20} />
+                                    <X size={22} />
                                 </motion.div>
                             ) : (
                                 <motion.div
@@ -156,9 +195,9 @@ const Navbar = () => {
                                     initial={{ rotate: 90, opacity: 0 }}
                                     animate={{ rotate: 0, opacity: 1 }}
                                     exit={{ rotate: -90, opacity: 0 }}
-                                    transition={{ duration: 0.2 }}
+                                    transition={{ duration: 0.15 }}
                                 >
-                                    <Menu size={20} />
+                                    <Menu size={22} />
                                 </motion.div>
                             )}
                         </AnimatePresence>
@@ -166,52 +205,69 @@ const Navbar = () => {
                 </div>
             </div>
 
-            {/* Mobile Menu Dropdown - Glass Effect */}
+            {/* Mobile Menu Dropdown - FIXED */}
             <AnimatePresence>
                 {isOpen && (
-                    <motion.div
-                        initial={{ opacity: 0, height: 0 }}
-                        animate={{ opacity: 1, height: 'auto' }}
-                        exit={{ opacity: 0, height: 0 }}
-                        transition={{ duration: 0.3, ease: "easeInOut" }}
-                        className="md:hidden overflow-hidden"
-                    >
-                        <div className="bg-gray-900/95 backdrop-blur-xl border-t border-white/10 border-b border-white/5">
-                            <div className="container mx-auto px-4 py-4 space-y-1">
-                                {navLinks.map((link, index) => (
-                                    <motion.a
-                                        key={link.name}
-                                        href={link.href}
-                                        onClick={(e) => handleNavClick(e, link.href)}
-                                        initial={{ opacity: 0, x: -20 }}
-                                        animate={{ opacity: 1, x: 0 }}
-                                        transition={{ delay: index * 0.05 }}
-                                        className={`flex items-center justify-between px-4 py-3 rounded-xl transition-all ${activeLink === link.id
-                                                ? 'bg-brand-primary/10 border border-brand-primary/30 text-white'
-                                                : 'text-gray-400 hover:text-white hover:bg-white/5'
-                                            }`}
-                                    >
-                                        <span className="font-medium">{link.name}</span>
-                                        {activeLink === link.id && (
-                                            <span className="w-2 h-2 rounded-full bg-gradient-to-r from-brand-primary to-brand-accent" />
-                                        )}
-                                    </motion.a>
-                                ))}
+                    <>
+                        {/* Backdrop for mobile menu */}
+                        <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            transition={{ duration: 0.2 }}
+                            onClick={() => setIsOpen(false)}
+                            className="md:hidden fixed inset-0 z-40 bg-black/50 backdrop-blur-sm"
+                        />
 
-                                {/* Mobile CTA */}
-                                <motion.a
-                                    href="#contact"
-                                    onClick={(e) => handleNavClick(e, '#contact')}
-                                    initial={{ opacity: 0, x: -20 }}
-                                    animate={{ opacity: 1, x: 0 }}
-                                    transition={{ delay: navLinks.length * 0.05 }}
-                                    className="flex items-center justify-center px-4 py-3 mt-2 bg-gradient-to-r from-brand-primary to-brand-accent text-white font-semibold rounded-xl shadow-lg shadow-brand-primary/25"
-                                >
-                                    Get Started
-                                </motion.a>
+                        {/* Menu Panel - FIXED positioning & animation */}
+                        <motion.div
+                            initial={{ opacity: 0, y: -20, scale: 0.98 }}
+                            animate={{ opacity: 1, y: 0, scale: 1 }}
+                            exit={{ opacity: 0, y: -20, scale: 0.98 }}
+                            transition={{ duration: 0.25, ease: "easeOut" }}
+                            className="md:hidden fixed top-full left-0 right-0 z-45 bg-gray-900/98 backdrop-blur-xl border-b border-white/10 shadow-2xl"
+                        >
+                            <div className="container mx-auto px-4 py-5">
+                                <nav className="space-y-2">
+                                    {navLinks.map((link, index) => (
+                                        <motion.a
+                                            key={link.name}
+                                            href={link.href}
+                                            onClick={(e) => handleNavClick(e, link.href)}
+                                            initial={{ opacity: 0, x: -15 }}
+                                            animate={{ opacity: 1, x: 0 }}
+                                            transition={{ delay: index * 0.04 }}
+                                            className={`flex items-center justify-between px-4 py-3.5 rounded-xl transition-all touch-manipulation min-h-[48px] ${activeLink === link.id
+                                                    ? 'bg-brand-primary/15 border border-brand-primary/30 text-white'
+                                                    : 'text-gray-300 hover:text-white hover:bg-white/5 border border-transparent'
+                                                }`}
+                                        >
+                                            <span className="font-medium text-base">{link.name}</span>
+                                            {activeLink === link.id && (
+                                                <motion.span
+                                                    initial={{ scale: 0 }}
+                                                    animate={{ scale: 1 }}
+                                                    className="w-2.5 h-2.5 rounded-full bg-gradient-to-r from-brand-primary to-brand-accent"
+                                                />
+                                            )}
+                                        </motion.a>
+                                    ))}
+
+                                    {/* Mobile CTA Button */}
+                                    <motion.a
+                                        href="#contact"
+                                        onClick={(e) => handleNavClick(e, '#contact')}
+                                        initial={{ opacity: 0, x: -15 }}
+                                        animate={{ opacity: 1, x: 0 }}
+                                        transition={{ delay: navLinks.length * 0.04 }}
+                                        className="flex items-center justify-center px-4 py-3.5 mt-3 bg-gradient-to-r from-brand-primary to-brand-accent text-white font-semibold rounded-xl shadow-lg shadow-brand-primary/25 hover:shadow-brand-primary/40 transition-all touch-manipulation min-h-[48px]"
+                                    >
+                                        Get Started
+                                    </motion.a>
+                                </nav>
                             </div>
-                        </div>
-                    </motion.div>
+                        </motion.div>
+                    </>
                 )}
             </AnimatePresence>
         </motion.nav>
